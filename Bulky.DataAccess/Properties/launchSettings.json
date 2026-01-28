@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Bulky.DataAccess": {
+      "commandName": "Project"
+    },
+    "Profile 1": {
+      "commandName": "Executable"
+    }
+  }
+}
