@@ -13,6 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddRazorPages();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 var app = builder.Build();
@@ -32,7 +33,8 @@ app.UseRouting();
 //Check if the username and password valid, then move to the next step
 app.UseAuthentication();
 app.UseAuthorization();
-
+//Neccessary for Identity to work, otherwise it will not work and you will not be able to login
+app.MapRazorPages();
 
 app.MapControllerRoute(
     name: "default",
