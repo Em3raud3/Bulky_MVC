@@ -118,6 +118,39 @@ namespace BulkyWeb.Areas.Customer.Controllers
             {
                 //it is regular customer and we need to capture payment
                 //stripe logic
+                var domain = "https://localhost:7045/";
+                var options = new Stripe.Checkout.SessionCreateOptions
+                {
+                    SuccessUrl = domain+ $"customer/cart/OrderConfirmation?id={ShoppingCartVM.OrderHeader.Id}",
+                    CancelUrl = domain + "customer/cart/index",
+                    LineItems = new List<Stripe.Checkout.SessionLineItemOptions>(),
+                    Mode = "payment",
+                };
+
+                foreach(var item in ShoppingCartVM.ShoppingCartsList)
+                {
+                    var sessionLineItem = new Stripe.Checkout.SessionLineItemOptions
+                    {
+                        PriceData = new Stripe.Checkout.SessionLineItemPriceDataOptions
+                        {
+                            UnitAmount = (long)(item.Price * 100), // Convert to cents
+                            Currency = "usd",
+                            ProductData = new Stripe.Checkout.SessionLineItemPriceDataProductDataOptions
+                            {
+                                Name = item.Product.Title,
+                            },
+                        },
+                        Quantity = item.Count,
+                    };
+                    options.LineItems.Add(sessionLineItem);
+                }
+
+                var service = new Stripe.Checkout.SessionService();
+                Stripe.Checkout.Session session = service.Create(options);
+                _unitOfWork.OrderHeader.UpdateStripePaymentID(ShoppingCartVM.OrderHeader.Id, session.Id, session.PaymentIntentId);
+                _unitOfWork.Save();
+                Response.Headers.Add("Location", session.Url);
+                return new StatusCodeResult(303);
             }
 
             return RedirectToAction(nameof(OrderConfirmation), new { id = ShoppingCartVM.OrderHeader.Id });
