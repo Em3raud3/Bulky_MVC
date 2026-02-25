@@ -104,6 +104,7 @@ namespace BulkyWeb.Areas.Admin.Controllers
             TempData["Success"] = "Order Shipped Successfully.";
             return RedirectToAction(nameof(Details), new { orderId = OrderVM.OrderHeader.Id });
         }
+
         [HttpPost]
         [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
         public IActionResult CancelOrder()
@@ -121,6 +122,7 @@ namespace BulkyWeb.Areas.Admin.Controllers
 
                 var service = new RefundService();
                 Refund refund = service.Create(options);
+
 
                 _unitOfWork.OrderHeader.UpdateStatus(orderHeader.Id, SD.StatusCancelled, SD.StatusRefunded);
             }
@@ -146,33 +148,32 @@ namespace BulkyWeb.Areas.Admin.Controllers
                 .GetAll(u => u.OrderHeaderId == OrderVM.OrderHeader.Id, includeProperties: "Product");
 
             //stripe logic
-            var domain = Request.Scheme + "://" + Request.Host.Value + "/";
-            var options = new SessionCreateOptions
+            var domain = "https://localhost:7045/";
+            var options = new Stripe.Checkout.SessionCreateOptions
             {
                 SuccessUrl = domain + $"admin/order/PaymentConfirmation?orderHeaderId={OrderVM.OrderHeader.Id}",
-                CancelUrl = domain + $"admin/order/details?orderId={OrderVM.OrderHeader.Id}",
-                LineItems = new List<SessionLineItemOptions>(),
+                CancelUrl = domain + "admin/order/details?orderHeaderId=" + OrderVM.OrderHeader.Id,
+                LineItems = new List<Stripe.Checkout.SessionLineItemOptions>(),
                 Mode = "payment",
             };
 
             foreach (var item in OrderVM.OrderDetails)
             {
-                var sessionLineItem = new SessionLineItemOptions
+                var sessionLineItem = new Stripe.Checkout.SessionLineItemOptions
                 {
-                    PriceData = new SessionLineItemPriceDataOptions
+                    PriceData = new Stripe.Checkout.SessionLineItemPriceDataOptions
                     {
-                        UnitAmount = (long)(item.Price * 100), // $20.50 => 2050
+                        UnitAmount = (long)(item.Price * 100), // Convert to cents
                         Currency = "usd",
-                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        ProductData = new Stripe.Checkout.SessionLineItemPriceDataProductDataOptions
                         {
-                            Name = item.Product.Title
-                        }
+                            Name = item.Product.Title,
+                        },
                     },
-                    Quantity = item.Count
+                    Quantity = item.Count,
                 };
                 options.LineItems.Add(sessionLineItem);
             }
-
 
             var service = new SessionService();
             Session session = service.Create(options);
@@ -199,10 +200,7 @@ namespace BulkyWeb.Areas.Admin.Controllers
                     _unitOfWork.OrderHeader.UpdateStatus(orderHeaderId, orderHeader.OrderStatus, SD.PaymentStatusApproved);
                     _unitOfWork.Save();
                 }
-
-
             }
-
 
             return View(orderHeaderId);
         }
