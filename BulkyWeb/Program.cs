@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Bulky.Utility;
 using Stripe;
+using Bulky.DataAccess.DbInitializer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+builder.Services.AddScoped<IDbInitilizer, DbInitializer>();
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
@@ -62,6 +64,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 //Neccessary for Identity to work, otherwise it will not work and you will not be able to login
 app.UseSession();
+SeedDatabase();
 app.MapRazorPages();
 app.MapControllerRoute(
     name: "default",
@@ -70,3 +73,12 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+void SeedDatabase()
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitilizer>();
+        dbInitializer.Initialize();
+    }
+}
